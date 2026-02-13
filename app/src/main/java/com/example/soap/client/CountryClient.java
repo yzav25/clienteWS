@@ -1,26 +1,40 @@
 package com.example.soap.client;
 
-import com.example.soap.wsdl.CapitalCity;
-import com.example.soap.wsdl.CapitalCityResponse;
+import com.example.soap.wsdl.Continent;
+import com.example.soap.wsdl.ListOfContinentsByNameResponseType;
+import com.example.soap.wsdl.ListOfContinentsByNameType;
+import com.example.soap.wsdl.ObjectFactory;
+import jakarta.xml.bind.JAXBElement;
 import org.springframework.stereotype.Service;
 import org.springframework.ws.client.core.WebServiceTemplate;
+
+import java.util.List;
 
 @Service
 public class CountryClient {
 
     private final WebServiceTemplate webServiceTemplate;
+    private final ObjectFactory objectFactory;
 
     public CountryClient(WebServiceTemplate webServiceTemplate) {
         this.webServiceTemplate = webServiceTemplate;
+        this.objectFactory = new ObjectFactory();
     }
 
-    public String getCapitalCity(String countryISOCode) {
-        CapitalCity request = new CapitalCity();
-        request.setSCountryISOCode(countryISOCode);
+    @SuppressWarnings("unchecked")
+    public List<Continent> getContinents() {
+        ListOfContinentsByNameType request = objectFactory.createListOfContinentsByNameType();
+        JAXBElement<ListOfContinentsByNameType> requestElement = objectFactory.createListOfContinentsByName(request);
 
-        CapitalCityResponse response = (CapitalCityResponse) webServiceTemplate
-                .marshalSendAndReceive(request);
+        Object response = webServiceTemplate.marshalSendAndReceive(requestElement);
 
-        return response.getCapitalCityResult();
+        ListOfContinentsByNameResponseType responseType;
+        if (response instanceof JAXBElement) {
+            responseType = ((JAXBElement<ListOfContinentsByNameResponseType>) response).getValue();
+        } else {
+            responseType = (ListOfContinentsByNameResponseType) response;
+        }
+
+        return responseType.getListOfContinentsByNameResult().getTContinent();
     }
 }
