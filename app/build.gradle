@@ -1,0 +1,64 @@
+plugins {
+    alias(libs.plugins.springBoot)
+    alias(libs.plugins.springDependencyManagement)
+    id 'java'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    jaxb
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-web-services'
+    implementation 'jakarta.xml.bind:jakarta.xml.bind-api'
+    implementation 'org.glassfish.jaxb:jaxb-runtime'
+
+    jaxb libs.jakarta.xml.bind.api
+    jaxb libs.jaxb.runtime
+    jaxb libs.jaxb.xjc
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.register('genJaxb') {
+    ext.sourcesDir = layout.buildDirectory.dir("generated-sources/jaxb").get().asFile.absolutePath
+    ext.schema = "${projectDir}/src/main/resources/wsdl/countryinfo.wsdl"
+
+    outputs.dir sourcesDir
+    doLast {
+        project.mkdir(sourcesDir)
+        ant.taskdef(name: 'xjc', classname: 'com.sun.tools.xjc.XJCTask', classpath: configurations.jaxb.asPath)
+        ant.xjc(destdir: sourcesDir, schema: schema, package: 'com.example.soap.wsdl') {
+            arg(value: "-wsdl")
+        }
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir layout.buildDirectory.dir("generated-sources/jaxb")
+        }
+    }
+}
+
+compileJava.dependsOn genJaxb
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
